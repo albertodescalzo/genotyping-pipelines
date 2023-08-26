@@ -1,4 +1,6 @@
-configfile: "config/config.yml"
+#configfile: "config/config.yml"
+
+bwa=config['programs']['bwa']
 
 downsampling_reads = {}
 for line in open(config['reads'], 'r'):
@@ -13,20 +15,34 @@ for line in open(config['reads'], 'r'):
 rule align_reads:
 	input:
 		reads = lambda wildcards: downsampling_reads[wildcards.sample],
-		fasta = lambda wildcards: config['callsets'][wildcards.callset]['reference'] 
+		fasta = lambda wildcards: config['callsets'][wildcards.callset]['reference'],
+		fasta_ann = lambda wildcards: config['callsets'][wildcards.callset]['reference'] + ".ann"
 	output:
-		bam = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full.bam",
-		bai = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full.bam.bai"
+		bam = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full.bam"
 	conda:
 		"../envs/downsampling.yml"
 	resources:
 		mem_total_mb = 60000,
 		runtime_hrs = 25,
 		runtime_min = 1
+	threads: 27
 	log:
-		"results/downsampling/{callset}/{coverage}/aligned/{sample}_full.log"
+		mem="results/downsampling/{callset}/{coverage}/aligned/{sample}_full_mem.log"
 	shell:
-		'(/usr/bin/time -v bwa mem -t {threads} -M {input.fasta} -R "@RG\\tID:{wildcards.sample}\\tLB:lib1\\tPL:illumina\\tPU:unit1\\tSM:{wildcards.sample}" {input.reads} | samtools view -bS | samtools sort -o {output} - ) &> {log}'
+		"""
+		(/usr/bin/time -v {bwa} mem -t {threads} -M {input.fasta} -R "@RG\\tID:{wildcards.sample}\\tLB:lib1\\tPL:illumina\\tPU:unit1\\tSM:{wildcards.sample}" {input.reads} | samtools view -bS | samtools sort -o {output.bam} - ) &> {log.mem}
+		"""
+
+## index BAM file
+rule samtools_index:
+	input:
+		"results/downsampling/{filename}.bam"
+	output:
+		"results/downsampling/{filename}.bam.bai"
+	log:
+		"results/downsampling/{filename}-index.log"
+	shell:
+		"(/usr/bin/time -v samtools index {input}) &> {log}"
 
 
 # estimate the coverage of the aligned data
@@ -64,4 +80,5 @@ rule downsample_reads:
 		"results/downsampling/{callset}/{coverage}/{sample}_{coverage}.log"
 	shell:
 		"bash workflow/scripts/downsample-fasta.sh {input.coverage} {wildcards.fraction} {input} {output} &> {log}"
+
 

@@ -2,57 +2,58 @@
 ### callsets to be used as input to PanGenie (multiple ones can be listed)
 
 callsets:
- cactus-hg38:
-   multi: "/gpfs/project/projects/medbioinf/users/ebler/minigraph-cactus-paper/genotyping-experiments-hg38/results/data/vcf/cactus-100000/cactus_filtered_ids.vcf.gz"
-   bi: "/gpfs/project/projects/medbioinf/users/ebler/minigraph-cactus-paper/genotyping-experiments-hg38/results/data/vcf/cactus-100000/cactus_filtered_ids_biallelic.vcf.gz"
-   reference: "/gpfs/project/projects/medbioinf/users/ebler/minigraph-cactus-paper/genotyping-experiments-hg38/results/data/fasta/hg38.fa"
-   variants:
-     - snp 
-     - indels
-     - large-deletion
-     - large-insertion
-     - large-complex
-   repeat_regions: "resources/ucsc-simple-repeats.bed"
-   leave_one_out_samples:
-     - HG00438
-     - HG02717
-     - HG00733
-     - NA20129
-     - HG03453
-
-
-# callsetname:
-#   # PanGenie-ready, multi-allelic VCF file
-#   multi: ""
-#   # PanGenie-ready, bi-allelic VCF file
-#   bi: ""
-#   # reference genome in FASTA format
-#   reference: ""
-#   # variants contained in the callset. Options are: snp|indels|large-deletion|large-insertion|large-complex
-#   variants:
-#     - snp 
-#     - indels
-#     - large-deletion
-#     - large-insertion
-#   # repeat annotations in BED format (see resources/ folder for GRCh38 and CHM13-based annotations)
-#   repeat_regions: ""
-#   # samples to run a leave-one-out experiment on
-#   leave_one_out_samples: []
+    HGSVC:
+        # PanGenie-ready, multi-allelic VCF file
+        # multi: "data/downloaded/vcf/HGSVC-GRCh38/Pangenome_graph_freeze3_64haplotypes.vcf.gz"
+        multi: "data/downloaded/vcf/HGSVC-GRCh38/Pangenome_reduced.vcf.gz"
+        # PanGenie-ready, bi-allelic VCF file
+        # bi: "data/downloaded/vcf/HGSVC-GRCh38/Callset_freeze3_64haplotypes.vcf.gz"
+        bi: "data/downloaded/vcf/HGSVC-GRCh38/Callset_reduced.vcf.gz"
+        # reference genome in FASTA format
+        reference: "data/downloaded/fasta/GRCh38_full_analysis_set_plus_decoy_hla.fa"
+        # variants contained in the callset. Options are: snp|indels|large-deletion|large-insertion|large-complex
+        variants:
+            - snp 
+            - indels
+            - large-deletion
+            - large-insertion
+        # repeat annotations in BED format (see resources/ folder for GRCh38 and CHM13-based annotations)
+        repeat_regions: "resources/ucsc-simple-repeats.bed"
+        # samples to run a leave-one-out experiment on
+        leave_one_out_samples: 
+            - NA24385
 
 
 
 # read data. File required that specifies a sample name, path to FASTA/FASTQ data and superpopulation:
 # FamilyID	SampleID	FatherID	MotherID	Population	Superpopulation	Sample_Illumina
-reads: "resources/genotyping-pilot-reads.tsv"
+reads: "resources/reads.tsv"
 
 
 # PanGenie command. Different versions can be run by listing several commandlines
-pangenie:
- pangenie.v211: "singularity exec --bind /:/hilbert eblerjana_eblerjana_pangenie-v211.sif PanGenie"
+pangenie: {}
+    
 
 # PanGenie command to be used for not yet released version of PanGenie (leave empty for now)
-pangenie-modules: {}
+pangenie-modules: 
+    pangenie.v3: "/usr/local/bin/PanGenie"
 
 
 # Downsampling coverages for leave-one-out experiment. If reads shall not be downsampled, leave empty.
 downsampling: []
+
+
+# Other programs
+programs:
+    rtg: "/home/ubuntu/rtg-tools-3.12.1/rtg"
+    bwa: "/usr/bin/bwa"
+    bayestyper: "/usr/local/bin/bayesTyper"
+    bayestyper_tools: "/usr/local/bin/bayesTyperTools"
+    graphtyper: "/usr/local/bin/graphtyper"
+    kmc: "/usr/bin/kmc"
+
+
+# Other parameters
+params:
+    bayestyper_reference_canon: "data/downloaded/bayestyper/bayestyper_GRCh38_bundle_v1.3/GRCh38_canon.fa"
+    bayestyper_reference_decoy: "data/downloaded/bayestyper/bayestyper_GRCh38_bundle_v1.3/GRCh38_decoy.fa"

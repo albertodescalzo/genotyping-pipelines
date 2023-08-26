@@ -25,7 +25,7 @@ def plot_concordances_all(files, outname, sources):
 				continue
 			vartype = f.split('_')[-1][:-4]
 			type_to_file[(source, vartype)] = f
-	variants = ['snp', 'indels', 'large-deletion', 'large-insertion', 'large-complex']
+	variants = ['snp', 'indels', 'large-deletion', 'large-insertion']
 	plot_index = 1
 	for var in variants:
 		plt.subplot(n_rows, n_cols, plot_index)
@@ -91,7 +91,7 @@ def plot_untyped_all(files, outname, sources):
 				continue
 			vartype = f.split('_')[-1][:-4]
 			type_to_file[(source, vartype)] = f
-	variants = ['snp', 'indels', 'large-deletion', 'large-insertion', 'large-complex']
+	variants = ['snp', 'indels', 'large-deletion', 'large-insertion']
 	plot_index = 1
 	for var in variants:
 		plt.subplot(n_rows, n_cols, plot_index)
@@ -157,7 +157,7 @@ def plot_fscores_all(files, outname, sources):
 				continue
 			vartype = f.split('_')[-1][:-4]
 			type_to_file[(source, vartype)] = f
-	variants = ['snp', 'indels', 'large-deletion', 'large-insertion', 'large-complex']
+	variants = ['snp', 'indels', 'large-deletion', 'large-insertion']
 	plot_index = 1
 	for var in variants:
 		plt.subplot(n_rows, n_cols, plot_index)
@@ -168,8 +168,6 @@ def plot_fscores_all(files, outname, sources):
 			print('source', source)
 			samples = []
 			fscores = []
-			if not (source,var) in type_to_file:
-				continue
 			for line in open(type_to_file[(source,var)], 'r'):
 				if line.startswith('sample'):
 					continue
@@ -219,7 +217,7 @@ def plot_concordance_vs_untyped(files, outname, sources):
 				continue
 			vartype = f.split('_')[-1][:-4]
 			type_to_file[(source, vartype)] = f
-	variants = ['snp', 'indels', 'large-deletion', 'large-insertion', 'large-complex']
+	variants = ['snp', 'indels', 'large-deletion', 'large-insertion']
 	data = {}
 	all_samples = []
 	is_first = True

@@ -1,0 +1,20 @@
+{
+	"reference": "downloaded/fasta/GRCh38_full_analysis_set_plus_decoy_hla.fa",
+	"repeats": "../resources/ucsc-simple-repeats.bed",
+	"input_graph": "downloaded/vcf/HGSVC-GRCh38/Pangenome_graph_freeze3_64haplotypes.vcf",
+	"samples_HGSVC": ["HG00731","HG00732","HG00512","HG00513","NA19238","NA19239","NA24385","HG03125","NA12878","HG03486","HG02818","HG03065","HG03683","HG02011","HG03371","NA12329","HG00171","NA18939","HG03732","HG00096","NA20847","HG03009","NA20509","HG00864","HG01505","NA18534","NA19650","HG02587","HG01596","HG01114","NA19983","HG02492"],
+	"samples_HPRC": ["HG00438","HG00621","HG00673","HG00733","HG00735","HG00741","HG01071","HG01106","HG01109","HG01123","HG01175","HG01243","HG01258","HG01358","HG01361","HG01891","HG01928","HG01952","HG01978","HG02055","HG02080","HG02109","HG02145","HG02148","HG02257","HG02486","HG02559","HG02572","HG02622","HG02630","HG02717","HG02723","HG02818","HG02886","HG03098","HG03453","HG03486","HG03492","HG03516","HG03540","HG03579","NA18906","NA20129","NA21309"],
+	"truth_bed": "downloaded/vcf/giab/hg38/HG002_GRCh38_1_22_v4.2.1_benchmark.bed",
+	"dataset": {
+		"leave_out_sample" : ["NA24385"],
+		"giab-small": "downloaded/vcf/giab/hg38/HG001_GRCh38_GIAB_highconf_CG-IllFB-IllGATKHC-Ion-10X-SOLID_CHROM1-X_v.3.3.2_highconf_PGandRTGphasetransfer.vcf.gz",
+		"giab-sv": "downloaded/vcf/giab/hg38/HG002v11-align2-GRCh38.dip.vcf.gz",
+		"GIAB": "downloaded/vcf/giab/hg38/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz"
+		},
+	"variant_size": ["small", "midsize", "large"],
+	"scripts": "../scripts",
+	"outdir": "prepared-datasets/",
+	"programs": {
+		"rtg": "/home/ubuntu/rtg-tools-3.12.1/rtg"
+	}
+}

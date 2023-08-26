@@ -1,0 +1,2 @@
+#FamilyID	SampleID	FatherID	MotherID	Sex	Population	Superpopulation	SampleIllumina
+NA24385	NA24385	0	0	1	UNKNOWN	UNKNOWN	data/downloaded/reads/NA24385/NA24385_raw.fastq.gz
