@@ -27,7 +27,7 @@ for line in open(config['reads'], 'r'):
 	reads_leave_one_out[sample_name] = read_path
 	unzipped_reads_leave_one_out[sample_name] = read_path.replace('.gz', '') 
 
-allowed_variants = ['snp', 'indels', 'large-deletion', 'large-insertion', 'large-complex']
+allowed_variants = ['snp', 'indels', 'large-deletion', 'large-insertion']
 callsets_leave_one_out = [s for s in config['callsets'].keys()]
 coverages_leave_one_out = ['full'] + [c for c in config['downsampling']]
 versions_leave_one_out = [v for v  in config['pangenie'].keys()] + [v for v in config['pangenie-modules'].keys()] + ['bayestyper', 'graphtyper'] # , 'graphtyper'
@@ -152,7 +152,7 @@ rule pangenie_modules:
 	input:
 		reads = lambda wildcards: reads_leave_one_out[wildcards.sample] if wildcards.coverage == 'full' else "results/downsampling/{callset}/{coverage}/{sample}_{coverage}.fa.gz",
 		fasta = lambda wildcards: config['callsets'][wildcards.callset]['reference'],
-		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}.vcf"
+		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi.vcf"
 	output:
 		genotyping = temp("results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf")
 	log:
@@ -549,13 +549,14 @@ rule vcfeval:
 		tmp = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/{regions}_{vartype}_tmp",
 		outname = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/{regions}_{vartype}",
 		which = "--all-records"
+	threads: 24
 	resources:
-		mem_total_mb = 20000,
+		mem_total_mb = 120000,
 		runtime_hrs = 1,
 		runtime_min = 40
 	shell:
 		"""
-		{rtg} vcfeval -b {input.baseline} -c {input.callset} -t {input.sdf} -o {params.tmp} --ref-overlap --evaluation-regions {input.regions} {params.which} --Xmax-length 30000 > {output.summary}.tmp
+		{rtg} vcfeval -b {input.baseline} -c {input.callset} -t {input.sdf} -o {params.tmp} --ref-overlap --evaluation-regions {input.regions} {params.which} --Xmax-length 30000 --threads {threads} > {output.summary}.tmp
 		mv {params.tmp}/* {params.outname}/
 		mv {output.summary}.tmp {output.summary}
 		rm -r {params.tmp}
@@ -641,7 +642,7 @@ rule collect_results:
 # plot results of different subsampling runs
 rule plotting_versions:
 	input:
-		lambda wildcards: expand("results/leave-one-out/{{callset}}/{version}/plots/{{coverage}}/{m}_{{callset}}-{version}-{{coverage}}_{{regions}}_{vartype}.tsv", m = wildcards.metric if wildcards.metric != 'untyped' else 'concordance', version=versions_leave_one_out, vartype=config['callsets'][wildcards.callset]['variants'])
+		lambda wildcards: expand("results/leave-one-out/{{callset}}/{version}/plots/{{coverage}}/{m}-{{callset}}-{version}-{{coverage}}_{{regions}}_{vartype}.tsv", m = wildcards.metric if wildcards.metric != 'untyped' else 'concordance', version=versions_leave_one_out, vartype=config['callsets'][wildcards.callset]['variants'])
 	output:
 		"results/leave-one-out/{callset}/plots/comparison-versions/{metric}/{metric}_{coverage}_{regions}.pdf"
 	wildcard_constraints:
@@ -660,7 +661,7 @@ rule plotting_versions:
 # plot results of different subsampling runs, comparing concordance and typed variants per sample
 rule plotting_versions_conc_vs_untyped:
 	input:
-		lambda wildcards: expand("results/leave-one-out/{{callset}}/{version}/plots/{{coverage}}/concordance_{{callset}}-{version}-{{coverage}}_{{regions}}_{vartype}.tsv", version=versions_leave_one_out, vartype=config['callsets'][wildcards.callset]['variants'])
+		lambda wildcards: expand("results/leave-one-out/{{callset}}/{version}/plots/{{coverage}}/concordance-{{callset}}-{version}-{{coverage}}_{{regions}}_{vartype}.tsv", version=versions_leave_one_out, vartype=config['callsets'][wildcards.callset]['variants'])
 	output:
 		"results/leave-one-out/{callset}/plots/comparison-versions/concordance-vs-untyped/concordance-vs-untyped_{coverage}_{regions}.pdf"
 	wildcard_constraints:
@@ -678,7 +679,7 @@ rule plotting_versions_conc_vs_untyped:
 # plot results of different coverages
 rule plotting_coverages:
 	input:
-		lambda wildcards: expand("results/leave-one-out/{{callset}}/{{version}}/plots/{coverage}/{m}_{{callset}}-{{version}}-{coverage}_{{regions}}_{vartype}.tsv", m = wildcards.metric if wildcards.metric != 'untyped' else 'concordance', coverage=coverages_leave_one_out, vartype=config['callsets'][wildcards.callset]['variants'])
+		lambda wildcards: expand("results/leave-one-out/{{callset}}/{{version}}/plots/{coverage}/{m}-{{callset}}-{{version}}-{coverage}_{{regions}}_{vartype}.tsv", m = wildcards.metric if wildcards.metric != 'untyped' else 'concordance', coverage=coverages_leave_one_out, vartype=config['callsets'][wildcards.callset]['variants'])
 	output:
 		"results/leave-one-out/{callset}/plots/comparison-coverages/{metric}/{metric}_{version}_{regions}.pdf"
 	wildcard_constraints:
@@ -695,15 +696,16 @@ rule plotting_coverages:
 
 
 # plot resources (single core CPU time and max RSS) for different subsampling runs
+## For now leave it out as it needs ot be modify for graphtyper because of the two variant types
 rule plotting_resources:
 	input:
-		lambda wildcards: expand("results/leave-one-out/{{callset}}/{version}/{sample}/{{coverage}}/pangenie-{sample}.log", version = versions_leave_one_out, sample = config['callsets'][wildcards.callset]['leave_one_out_samples'])
+		lambda wildcards: expand("results/leave-one-out/{{callset}}/{version}/{sample}/{{coverage}}/{version}-{sample}.log", version = versions_leave_one_out, sample = config['callsets'][wildcards.callset]['leave_one_out_samples'])
 	output:
-		"results/leave-one-out/{callset}/plots/resources/resources-{callset}-{coverage}.pdf"
+		"results/leave-one-out/{callset}/plots/resources/resources_{callset}-{coverage}.pdf"
 	conda:
 		"../envs/genotyping.yml"
 	params:
-		outname = "results/leave-one-out/{callset}/plots/resources/resources-{callset}-{coverage}",
+		outname = "results/leave-one-out/{callset}/plots/resources/resources_{callset}-{coverage}",
 		samples	= lambda wildcards: " ".join(config['callsets'][wildcards.callset]['leave_one_out_samples']),
 		versions = " ".join(versions_leave_one_out)
 	shell:

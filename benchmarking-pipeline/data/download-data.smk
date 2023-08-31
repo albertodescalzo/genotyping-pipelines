@@ -15,6 +15,7 @@ rule all:
         # references
         'downloaded/fasta/GRCh38_full_analysis_set_plus_decoy_hla.fa',
         'downloaded/fasta/GRCh38_full_analysis_set_plus_decoy_hla.fa.fai',
+        "downloaded/fasta/GRCh38_full_analysis_set_plus_decoy_hla.fa.ann",
         
         # Input Pangenome Graph (PanGenie Github)
         'downloaded/vcf/HGSVC-GRCh38/Pangenome_graph_freeze3_64haplotypes.vcf.gz',

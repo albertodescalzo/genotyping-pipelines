@@ -8,7 +8,7 @@ rule download_giab_fastq:
 
 rule combine_giab_fastq:
 	input:
-		expand("downloaded/reads/NA24385/raw/D1_S1_{l}_R{r}_{n}.fastq.gz", l = ['L002'], r = ['1'], n = ['001'])
+		expand("downloaded/reads/NA24385/raw/D1_S1_{l}_R{r}_{n}.fastq.gz", l = ['L001', 'L002'], r = ['1', '2'], n = numbers)
 	output:
 		"downloaded/reads/NA24385/NA24385_raw.fastq.gz"
 	shell:

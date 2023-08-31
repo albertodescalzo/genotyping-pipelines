@@ -19,11 +19,11 @@ rule index:
 ## index fasta
 rule bwa_index:
 	input:
-		"{filename}.fa"
+		"downloaded/{filename}.fa"
 	output:
-		"{filename}.fa" + ".ann"
+		"downloaded/{filename}.fa" + ".ann"
 	log:
-		"downloaded/fasta/reference-indexing.log"
+		"downloaded/{filename}-indexing.log"
 	resources:
 		mem_total_mb=5000
 	shell:

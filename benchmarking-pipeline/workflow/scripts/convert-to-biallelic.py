@@ -13,7 +13,8 @@ args = parser.parse_args()
 chrom_to_variants = defaultdict(lambda: defaultdict(list))
 
 # read the biallelic VCF containing REF/ALT for all variant IDs and store them
-for line in gzip.open(args.vcf, 'rt'):
+#for line in gzip.open(args.vcf, 'rt'):
+for line in open(args.vcf, 'rt'):
 	if line.startswith('#'):
 		continue
 	fields = line.split()
@@ -48,7 +49,10 @@ for line in sys.stdin:
 	ids = set([])
 	for i in info_field['ID'].split(','):
 		for j in i.split(':'):
-			ids.add((j,int(chrom_to_variants[fields[0]][j][0])))
+			if j not in chrom_to_variants[fields[0]].keys(): # unknown allele
+				ids.add((j,int(fields[1])))
+			else:
+				ids.add((j,int(chrom_to_variants[fields[0]][j][0])))
 	# sort the ids by the starting coordinate (to ensure the VCF is sorted)
 	ids = list(ids)
 	ids.sort(key=lambda x : x[1])
@@ -60,9 +64,15 @@ for line in sys.stdin:
 		# also add ID to ID column of the VCF
 		vcf_line[2] = var_id
 		# set REF
-		vcf_line[3] = chrom_to_variants[fields[0]][var_id][1]
+		if var_id not in chrom_to_variants[fields[0]].keys(): # unknown allele
+			vcf_line[3] = var_id.split('-')[3]
+		else: 
+			vcf_line[3] = chrom_to_variants[fields[0]][var_id][1]
 		# set ALT
-		vcf_line[4] = chrom_to_variants[fields[0]][var_id][2]
+		if var_id not in chrom_to_variants[fields[0]].keys(): # unknown allele 
+			vcf_line[4] = var_id.split('-')[4]
+		else:
+			vcf_line[4] = chrom_to_variants[fields[0]][var_id][2]
 		# set INFO
 		vcf_line[7] = 'ID=' + var_id
 		# also add other INFO fields (except ID which was replaced)
