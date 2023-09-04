@@ -21,7 +21,7 @@ def plot_concordances_all(files, outname, sources):
 	plt.figure(figsize=(19,20))
 	for source in sources:
 		for f in files:
-			if not ('_' + source + '_') in f:
+			if not ('-' + source + '_') in f:
 				continue
 			vartype = f.split('_')[-1][:-4]
 			type_to_file[(source, vartype)] = f
@@ -87,7 +87,7 @@ def plot_untyped_all(files, outname, sources):
 	plt.figure(figsize=(19,20))
 	for source in sources:
 		for f in files:
-			if not ('_' + source + '_') in f:
+			if not ('-' + source + '_') in f:
 				continue
 			vartype = f.split('_')[-1][:-4]
 			type_to_file[(source, vartype)] = f
@@ -153,7 +153,7 @@ def plot_fscores_all(files, outname, sources):
 	plt.figure(figsize=(19,20))
 	for source in sources:
 		for f in files:
-			if not ('_' + source + '_') in f:
+			if not ('-' + source + '_') in f:
 				continue
 			vartype = f.split('_')[-1][:-4]
 			type_to_file[(source, vartype)] = f
@@ -213,7 +213,7 @@ def plot_concordance_vs_untyped(files, outname, sources):
 	plt.figure(figsize=(19,20))
 	for source in sources:
 		for f in files:
-			if not ('_' + source + '_') in f:
+			if not ('-' + source + '_') in f:
 				continue
 			vartype = f.split('_')[-1][:-4]
 			type_to_file[(source, vartype)] = f
