@@ -33,6 +33,20 @@ rule align_reads:
 		(/usr/bin/time -v {bwa} mem -t {threads} -M {input.fasta} -R "@RG\\tID:{wildcards.sample}\\tLB:lib1\\tPL:illumina\\tPU:unit1\\tSM:{wildcards.sample}" {input.reads} | samtools view -bS | samtools sort -o {output.bam} - ) &> {log.mem}
 		"""
 
+## split BAM by chromosome
+rule split_bam_by_chromosome:
+	input:
+		bam='results/downsampling/{callset}/{coverage}/aligned/{sample}_full.bam',
+		bai='results/downsampling/{callset}/{coverage}/aligned/{sample}_full.bam.bai'
+	output:
+		bam='results/downsampling/{callset}/{coverage}/aligned/{sample}_full.chr{chrom}.bam'
+	conda:
+		'../envs/genotyping.yml'
+	shell:
+		"""
+        samtools view -h {input.bam} chr{wildcards.chrom} | samtools view -Sb -> {output.bam}
+        """
+
 ## index BAM file
 rule samtools_index:
 	input:
@@ -80,5 +94,3 @@ rule downsample_reads:
 		"results/downsampling/{callset}/{coverage}/{sample}_{coverage}.log"
 	shell:
 		"bash workflow/scripts/downsample-fasta.sh {input.coverage} {wildcards.fraction} {input} {output} &> {log}"
-
-
