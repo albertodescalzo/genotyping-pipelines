@@ -13,8 +13,8 @@ args = parser.parse_args()
 chrom_to_variants = defaultdict(lambda: defaultdict(list))
 
 # read the biallelic VCF containing REF/ALT for all variant IDs and store them
-#for line in gzip.open(args.vcf, 'rt'):
-for line in open(args.vcf, 'rt'):
+#for line in open(args.vcf, 'rt'):
+for line in gzip.open(args.vcf, 'rt'):
 	if line.startswith('#'):
 		continue
 	fields = line.split()
