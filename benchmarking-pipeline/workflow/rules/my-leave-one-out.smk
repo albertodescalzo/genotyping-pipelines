@@ -78,7 +78,14 @@ rule prepare_panel:
 		"""
 
 
-
+rule normalize_input_panel:
+	input:
+		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi.vcf.gz",
+		reference=lambda wildcards: config['callsets'][wildcards.callset]['reference']
+	output:
+		"results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf"
+	shell:
+		"bcftools norm -m +any -d all -f {input.reference} {input.vcf} | bcftools sort > {output}"
 
 # extract ground truth genotypes for sample 
 rule prepare_truth:
@@ -95,8 +102,6 @@ rule prepare_truth:
 		"results/leave-one-out/{callset}/truth/truth-{sample}-{callset}.log"
 	shell:
 		"bcftools view --samples {wildcards.sample} {input} 2> {log} 1> {output}"
-
-
 
 
 rule compress_vcf:
@@ -125,7 +130,7 @@ rule pangenie:
 	input:
 		reads = lambda wildcards: reads_leave_one_out[wildcards.sample] if wildcards.coverage == 'full' else "results/downsampling/{callset}/{coverage}/{sample}_{coverage}.fa.gz",
 		fasta = lambda wildcards: config['callsets'][wildcards.callset]['reference'],
-		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi.vcf"
+		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf"
 	output:
 		genotyping = temp("results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf")
 	log:
@@ -152,7 +157,7 @@ rule pangenie_modules:
 	input:
 		reads = lambda wildcards: reads_leave_one_out[wildcards.sample] if wildcards.coverage == 'full' else "results/downsampling/{callset}/{coverage}/{sample}_{coverage}.fa.gz",
 		fasta = lambda wildcards: config['callsets'][wildcards.callset]['reference'],
-		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi.vcf"
+		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf"
 	output:
 		genotyping = temp("results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf")
 	log:
@@ -243,7 +248,7 @@ checkpoint bayestyper_cluster:
 	input:
 		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.bloomData",
 		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.bloomMeta",
-		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi.vcf",
+		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf",
 		samples="results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.tsv"
 	output:
 		dir=directory("results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/clusters")
@@ -363,8 +368,8 @@ rule graphtyper_genotype:
     input:
         vcf = "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_bi_chr{chrom}_{variant}.vcf.gz",
         tbi = "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_bi_chr{chrom}_{variant}.vcf.gz.tbi",
-        bam = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full.bam",
-        bai = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full.bam.bai",
+        bam = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full.chr{chrom}.bam",
+        bai = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full.chr{chrom}.bam.bai",
         fasta= lambda wildcards: config['callsets'][wildcards.callset]['reference']
     output:
         vcf="results/leave-one-out/{callset}/graphtyper/{sample}/{coverage}/temp/{variant}/graphtyper-{sample}_genotyping.chr{chrom}.vcf"
@@ -379,7 +384,7 @@ rule graphtyper_genotype:
     conda:
         "../envs/genotyping.yml"
     threads:
-        24
+        1
     resources:
         mem_total_mb=30000,
         runtime_hrs=4,
@@ -392,21 +397,22 @@ rule graphtyper_genotype:
             bcftools concat -a {params.dir}/chr{wildcards.chrom}/*.vcf.gz | python3 workflow/scripts/graphtyper-postprocess.py {input.vcf} > {output.vcf}
         else
             if [ "{wildcards.variant}" == "indel" ]; then
-                (/usr/bin/time -v {graphtyper} genotype {input.fasta} --sam={input.bam} --region=chr{wildcards.chrom} --no_decompose --verbose --output={params.dir} --threads={threads}) &> {log}
+                (/usr/bin/time -v {graphtyper} genotype {input.fasta} --vcf={input.vcf} --sam={input.bam} --region=chr{wildcards.chrom} --no_decompose --verbose --output={params.dir} --threads={threads}) &> {log}
                 bcftools concat -a {params.dir}/chr{wildcards.chrom}/*.vcf.gz > {output.vcf}
             fi
         fi
         """
         
 		
-rule merge_vcfs_all_chromosomes:
+rule merge_vcfs_all_chromosomes_and_normalize:
     input:
-        vcfs=lambda wildcards: expand("results/leave-one-out/{{callset}}/graphtyper/{{sample}}/{{coverage}}/temp/{variant}/graphtyper-{{sample}}_genotyping.chr{chrom}.vcf.gz", chrom=chromosomes, variant=["indel", "sv"])
+        vcfs=lambda wildcards: expand("results/leave-one-out/{{callset}}/graphtyper/{{sample}}/{{coverage}}/temp/{variant}/graphtyper-{{sample}}_genotyping.chr{chrom}.vcf.gz", chrom=chromosomes, variant=["indel", "sv"]),
+        reference=lambda wildcards: config['callsets'][wildcards.callset]['reference']
     output: 
         "results/leave-one-out/{callset}/graphtyper/{sample}/{coverage}/temp/graphtyper-{sample}_genotyping.vcf"
     shell: 
         """
-        bcftools concat -a {input.vcfs} > {output}
+        bcftools concat -a {input.vcfs} | bcftools norm -f {input.reference} -m -any | bcftools sort > {output}
         """
 
 
@@ -450,7 +456,7 @@ def get_panel_vcf(wildcards):
 	if wildcards.version == 'graphtyper':
 		return "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_bi.vcf"
 	else:
-		return "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi.vcf"
+		return "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf"
 
 # convert genotyped VCF to biallelic representation
 ## Probably include here the other algorithms (Bayestyper, GraphTyper)
@@ -461,13 +467,15 @@ rule convert_genotypes_to_biallelic:
 		biallelic = lambda wildcards: config['callsets'][wildcards.callset]['bi']
 	output:
 		"results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping-biallelic.vcf"
+	log:
+		"results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping-biallelic.log"
 	conda:
 		"../envs/genotyping.yml"
 	resources:
 		mem_total_mb=30000
 	priority: 1
 	shell:
-		"zcat {input.genotyped_vcf} | python3 workflow/scripts/annotate.py {input.panel_vcf} | python3 workflow/scripts/convert-to-biallelic.py {input.biallelic} | awk '$1 ~ /^#/ {{print $0;next}} {{print $0 | \"sort -k1,1 -k2,2n \"}}' > {output}"
+		"(zcat {input.genotyped_vcf} | python3 workflow/scripts/annotate.py {input.panel_vcf} | python3 workflow/scripts/convert-to-biallelic.py {input.biallelic} | awk '$1 ~ /^#/ {{print $0;next}} {{print $0 | \"sort -k1,1 -k2,2n \"}}' > {output}) &> {log}"
 
 
 # determine untypable ids
