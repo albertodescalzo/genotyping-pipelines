@@ -159,10 +159,10 @@ rule pangenie_modules:
 		fasta = lambda wildcards: config['callsets'][wildcards.callset]['reference'],
 		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf"
 	output:
-		genotyping = temp("results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf")
+		genotyping = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf"
 	log:
 		index = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_index.log",
-		genotype = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}.log"
+		genotype = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping.log"
 	threads: 24
 	resources:
 		mem_total_mb=190000,
@@ -321,7 +321,7 @@ rule bcftools_concat_units:
 	output:
 		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/bayestyper-{sample}_genotyping.vcf"
 	log:
-		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/bayestyper-{sample}.log"
+		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/bayestyper-{sample}_concat-units.log"
 	shell:
 		"/usr/bin/time -v bcftools concat -a -o {output} {input.vcfs} &> {log}"
 
@@ -701,10 +701,58 @@ rule plotting_coverages:
 	shell:
 		"python3 workflow/scripts/plot-results.py -files {input} -outname {output} -sources {params.sources} -metric {wildcards.metric}"
 
+def collect_logs_all_unit_ids_bayestyper(wildcards):
+	checkpoint_output = checkpoints.bayestyper_cluster.get(**wildcards).output[0]
+	result = expand("results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/genotype/bayestyper_unit_{unit_id}/bayestyper.log",
+					callset=wildcards.callset,
+					sample=wildcards.sample,
+					coverage=wildcards.coverage,
+					unit_id=glob_wildcards(os.path.join(checkpoint_output, "bayestyper_unit_{unit_id}/variant_clusters.bin")).unit_id)
+	return sorted(result)
 
+rule collect_runtime_info_bayestyper:
+	input:
+		bayestyper_kmers = "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}_kmc.log",
+		bayestyper_bloomfilter = "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}_bloom.log",
+		bayestyper_clusters = "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/clusters/clusters-log.log",
+		bayestyper_genotype = collect_logs_all_unit_ids_bayestyper
+	output:
+		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/bayestyper-{sample}.log"
+	shell:
+		"cat {input.bayestyper_kmers} {input.bayestyper_bloomfilter} {input.bayestyper_clusters} {input.bayestyper_genotype} > {output}"
+
+def collect_logs_index_reads(wildcards):
+	folder_path = f"results/downsampling/{wildcards.callset}/{wildcards.coverage}/aligned/"
+	files_in_folder = os.listdir(folder_path)
+	log_filenames = [folder_path + f for f in files_in_folder if f.endswith("-index.log")]
+	return sorted(log_filenames)
+
+rule collect_runtime_info_graphtyper:
+	input:
+		graphtyper_aligning_reads = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full_mem.log",
+		graphtyper_indexing_reads = collect_logs_index_reads,
+		graphtyper_genotype = lambda wildcards: expand("results/leave-one-out/{{callset}}/graphtyper/{{sample}}/{{coverage}}/temp/{variant}/chr{chrom}.log", chrom=chromosomes, variant=["indel", "sv"])
+	output:
+		"results/leave-one-out/{callset}/graphtyper/{sample}/{coverage}/graphtyper-{sample}.log"
+	conda:
+		"../envs/genotyping.yml"
+	shell:
+		"cat {input.graphtyper_aligning_reads} {input.graphtyper_indexing_reads} {input.graphtyper_genotype} > {output}"
+
+rule collect_runtime_info_pangenie:
+	input:
+		pangenie_index = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_index.log",
+		pangenie_genotype = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping.log"
+	output:
+		"results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}.log"
+	wildcard_constraints:
+		version = "|".join([k for k in config['pangenie-modules'].keys()] + ['^' + k for k in config['pangenie']])
+	shell:
+		"cat {input.pangenie_index} {input.pangenie_genotype} > {output}"
+        
+        
 
 # plot resources (single core CPU time and max RSS) for different subsampling runs
-## For now leave it out as it needs ot be modify for graphtyper because of the two variant types
 rule plotting_resources:
 	input:
 		lambda wildcards: expand("results/leave-one-out/{{callset}}/{version}/{sample}/{{coverage}}/{version}-{sample}.log", version = versions_leave_one_out, sample = config['callsets'][wildcards.callset]['leave_one_out_samples'])

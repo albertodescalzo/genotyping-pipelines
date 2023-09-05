@@ -2,6 +2,7 @@ configfile: 'config.json'
 
 include: "rules/download-references.smk"
 include: "rules/download-reads-NA24385.smk"
+include: "rules/download-reads-1000G.smk"
 include: "rules/download-bed.smk"
 include: "rules/download-graphs-and-callsets.smk"
 include: "rules/input-preprocessing.smk"
@@ -25,6 +26,7 @@ rule all:
          
         # reads
         expand("downloaded/reads/{sample}/{sample}_raw.fastq.gz", sample=sample),
+        expand("downloaded/reads/{sample}/{sample}_raw.fastq.gz", sample=["NA12878"]),
 
         ## Download GRCh38 bundle for BayesTyper
         "downloaded/bayestyper/bayestyper_GRCh38_bundle.tar.gz",
