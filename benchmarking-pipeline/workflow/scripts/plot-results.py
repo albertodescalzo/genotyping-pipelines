@@ -52,7 +52,7 @@ def plot_concordances_all(files, outname, sources):
 			is_first = False
 			x_values = [i*5 for i in range(len(samples))]
 			plt.plot(x_values, concordances, label=source, color=colors[i], marker='o')
-		plt.ylim(60,100)
+		plt.ylim(40,100)
 		plt.title(var_to_name[var])
 		plt.xticks(x_values, all_samples, rotation='vertical')
 		plt.ylabel('weighted genotype concordance [%]')
@@ -118,7 +118,7 @@ def plot_untyped_all(files, outname, sources):
 			is_first = False
 			x_values = [i*5 for i in range(len(samples))]
 			plt.plot(x_values, untyped, label=source, color=colors[i], marker='o')
-		plt.ylim(0.0, 7.0)
+		plt.ylim(0.0, 100.0)
 		plt.title(var_to_name[var])
 		plt.xticks(x_values, all_samples, rotation='vertical')
 		plt.ylabel('untyped variants [%]')
