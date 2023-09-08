@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Define the folder containing the TSV files
-folders=("/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/bayestyper/plots/full/" "/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/pangenie.v3/plots/full/" "/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/graphtyper/plots/full/")
+#folders=("/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/bayestyper/plots/full/" "/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/pangenie.v3/plots/full/" "/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/graphtyper/plots/full/")
+folders=("/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/pangenie.v3/plots/full/")
 
 for folder in "${folders[@]}"; do
     # Loop through each TSV file in the folder

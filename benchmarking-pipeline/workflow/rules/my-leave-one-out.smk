@@ -662,7 +662,7 @@ rule plotting_versions:
 	params:
 		sources = lambda wildcards: ' '.join([wildcards.callset + '-' + v + '-' + wildcards.coverage + '_' + wildcards.regions for v in versions_leave_one_out])
 	shell:
-		"python3 workflow/scripts/plot-results.py -files {input} -outname {output} -sources {params.sources} -metric {wildcards.metric}"
+		"python3 workflow/scripts/plot-results_for_slides.py -files {input} -outname {output} -sources {params.sources} -metric {wildcards.metric}"
 
 
 
@@ -680,7 +680,7 @@ rule plotting_versions_conc_vs_untyped:
 	params:
 		sources = lambda wildcards: ' '.join([wildcards.callset + '-' + v + '-' + wildcards.coverage + '_' + wildcards.regions for v in versions_leave_one_out])
 	shell:
-		"python3 workflow/scripts/plot-results.py -files {input} -outname {output} -sources {params.sources} -metric concordance-vs-untyped"
+		"python3 workflow/scripts/plot-results_for_slides.py -files {input} -outname {output} -sources {params.sources} -metric concordance-vs-untyped"
 
 
 
