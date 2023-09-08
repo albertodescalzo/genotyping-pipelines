@@ -5,6 +5,7 @@ bayestyper=config['programs']['bayestyper']
 bayestyper_tools=config['programs']['bayestyper_tools']
 graphtyper=config['programs']['graphtyper']
 rtg=config['programs']['rtg']
+truvari = config['programs']['truvari']
 
 # parameters
 chromosomes = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X"]
@@ -552,22 +553,60 @@ rule vcfeval:
 	wildcard_constraints:
 		sample = "|".join([s for s in reads_leave_one_out.keys()]),
 		regions = "biallelic|multiallelic",
-		vartype = "|".join(allowed_variants)
+		vartype = "snp|indels"
 	params:
 		tmp = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/{regions}_{vartype}_tmp",
 		outname = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/{regions}_{vartype}",
 		which = "--all-records"
-	threads: 24
+	log:
+		"results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/logs/{regions}_{vartype}.log"
+	threads: 27
 	resources:
 		mem_total_mb = 120000,
 		runtime_hrs = 1,
 		runtime_min = 40
 	shell:
 		"""
-		{rtg} vcfeval -b {input.baseline} -c {input.callset} -t {input.sdf} -o {params.tmp} --ref-overlap --evaluation-regions {input.regions} {params.which} --Xmax-length 30000 --threads {threads} > {output.summary}.tmp
+		{rtg} vcfeval -b {input.baseline} -c {input.callset} -t {input.sdf} -o {params.tmp} --ref-overlap --evaluation-regions {input.regions} {params.which} --Xmax-length 30000 --threads {threads} &> {log}
 		mv {params.tmp}/* {params.outname}/
-		mv {output.summary}.tmp {output.summary}
 		rm -r {params.tmp}
+		"""
+
+# precision-recall
+rule truvari:
+	input:
+		callset = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping-biallelic-typable-{vartype}.vcf.gz",
+		callset_tbi = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping-biallelic-typable-{vartype}.vcf.gz.tbi",
+		baseline = "results/leave-one-out/{callset}/truth/truth-{sample}-{callset}-typable-{vartype}.vcf.gz",
+		baseline_tbi = "results/leave-one-out/{callset}/truth/truth-{sample}-{callset}-typable-{vartype}.vcf.gz.tbi",
+		regions = region_to_bed,
+		reference = lambda wildcards: config['callsets'][wildcards.callset]['reference']
+	output:
+		summary_json = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/{regions}_{vartype}/summary.json",
+		summary_txt = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/{regions}_{vartype}/summary.txt"
+	conda:
+		"../envs/genotyping.yml"
+	priority: 1
+	wildcard_constraints:
+		sample = "|".join([s for s in reads_leave_one_out.keys()]),
+		regions = "biallelic|multiallelic",
+		vartype = "large-deletion|large-insertion"
+	params:
+		tmp = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/{regions}_{vartype}_tmp",
+		outname = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/{regions}_{vartype}",
+	log:
+		"results/leave-one-out/{callset}/{version}/{sample}/{coverage}/precision-recall-typable/logs/{regions}_{vartype}.log"
+	threads: 1
+	resources:
+		mem_total_mb = 40000,
+		runtime_hrs = 1,
+		runtime_min = 40
+	shell:
+		"""
+		{truvari} bench -b {input.baseline} -c {input.callset} -f {input.reference} -o {params.tmp} --pick multi --includebed {input.regions} -r 2000 --no-ref a -C 2000 --passonly &> {log} 
+		mv {params.tmp}/* {params.outname}/
+		rm -r {params.tmp}
+		python3 workflow/scripts/parse_json_to_txt.py {output.summary_json} > {output.summary_txt}
 		"""
 
 
@@ -632,11 +671,13 @@ rule genotype_concordances:
 
 
 # collect results across all samples
-rule collect_results:
+rule collect_results_vcfeval:
 	input:
 		lambda wildcards: expand("results/leave-one-out/{{callset}}/{{version}}/{sample}/{{coverage}}/{{metric}}/{{regions}}_{{vartype}}/summary.txt", sample = config['callsets'][wildcards.callset]['leave_one_out_samples'])
 	output:
 		"results/leave-one-out/{callset}/{version}/plots/{coverage}/{metric}-{callset}-{version}-{coverage}_{regions}_{vartype}.tsv"
+	#wildcard_constraints:
+	#	vartype = 'snp|indels'
 	params:
 		samples = lambda wildcards: ','.join([c for c in config['callsets'][wildcards.callset]['leave_one_out_samples']]),
 		outfile = "results/leave-one-out/{callset}/{version}/plots/{coverage}/{metric}-{callset}-{version}-{coverage}_{regions}_{vartype}",
