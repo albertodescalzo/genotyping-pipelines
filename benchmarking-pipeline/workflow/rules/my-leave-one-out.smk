@@ -762,16 +762,10 @@ rule collect_runtime_info_bayestyper:
 	shell:
 		"cat {input.bayestyper_kmers} {input.bayestyper_bloomfilter} {input.bayestyper_clusters} {input.bayestyper_genotype} > {output}"
 
-def collect_logs_index_reads(wildcards):
-	folder_path = f"results/downsampling/{wildcards.callset}/{wildcards.coverage}/aligned/"
-	files_in_folder = os.listdir(folder_path)
-	log_filenames = [folder_path + f for f in files_in_folder if f.endswith("-index.log")]
-	return sorted(log_filenames)
-
 rule collect_runtime_info_graphtyper:
 	input:
 		graphtyper_aligning_reads = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full_mem.log",
-		graphtyper_indexing_reads = collect_logs_index_reads,
+		graphtyper_indexing_reads = lambda wildcards: expand("results/downsampling/{{callset}}/{{coverage}}/aligned/{{sample}}_full.chr{chrom}-index.log", chrom=chromosomes),
 		graphtyper_genotype = lambda wildcards: expand("results/leave-one-out/{{callset}}/graphtyper/{{sample}}/{{coverage}}/temp/{variant}/chr{chrom}.log", chrom=chromosomes, variant=["indel", "sv"])
 	output:
 		"results/leave-one-out/{callset}/graphtyper/{sample}/{coverage}/graphtyper-{sample}.log"

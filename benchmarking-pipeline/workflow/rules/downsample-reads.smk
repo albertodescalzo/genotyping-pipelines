@@ -50,11 +50,11 @@ rule split_bam_by_chromosome:
 ## index BAM file
 rule samtools_index:
 	input:
-		"results/downsampling/{filename}.bam"
+		"results/downsampling/{callset}/{coverage}/aligned/{filename}.bam"
 	output:
-		"results/downsampling/{filename}.bam.bai"
+		"results/downsampling/{callset}/{coverage}/aligned/{filename}.bam.bai"
 	log:
-		"results/downsampling/{filename}-index.log"
+		"results/downsampling/{callset}/{coverage}/aligned/{filename}-index.log"
 	shell:
 		"(/usr/bin/time -v samtools index {input}) &> {log}"
 
