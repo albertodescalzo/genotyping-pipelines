@@ -1,9 +1,7 @@
 configfile: 'config/config.yaml'
-include: 'rules/my-leave-one-out.smk'
+include: 'rules/download-data.smk'
 include: 'rules/downsample-reads.smk'
-#include: 'rules/leave-one-out-NEW.smk'
-include: 'rules/population-typing-NEW.smk'
-include: 'rules/population-evaluation.smk'
+include: 'rules/leave-one-out-experiments.smk'
 
 coverages = ['full'] + config['downsampling']
 
@@ -13,30 +11,10 @@ chromosomes = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "1
 
 rule all:
 	input:
-		expand("results/leave-one-out/{callset}/plots/comparison-versions/{metric}/{metric}_{coverage}_{regions}.pdf", callset = [c for c in config['callsets'].keys()], metric = ['concordance', 'precision-recall-typable', 'untyped', 'concordance-vs-untyped'], coverage = coverages, regions = ['biallelic', 'multiallelic']),
-		expand("results/leave-one-out/{callset}/plots/comparison-coverages/{metric}/{metric}_{version}_{regions}.pdf", callset = [c for c in config['callsets'].keys()], metric = ['concordance', 'precision-recall-typable', 'untyped'], version = versions_to_run, regions = ['biallelic', 'multiallelic']),
 		expand("results/leave-one-out/{callset}/plots/resources/resources_{callset}-{coverage}.pdf", callset = [c for c in config['callsets'].keys()], coverage = coverages),
-
-		expand("results/population-typing/{callset}/{version}/{coverage}/merged-vcfs/whole-genome/all-samples_{what}_all.vcf.gz", callset = [c for c in config['callsets'].keys()], what = ['bi'], version = versions_to_run, coverage = coverages),
-		expand("results/population-typing/{callset}/sample-index.tsv", callset = [c for c in config['callsets'].keys()]),
-		expand("results/population-typing/{callset}/{version}/{coverage}/evaluation/statistics/plot_bi_all_filters.tsv", callset = [c for c in config['callsets'].keys()], version = versions_to_run, coverage = ['full'])
+		expand("results/leave-one-out/{callset}/plots/comparison-versions/{metric}/{metric}_{coverage}_{regions}.pdf", callset = [c for c in config['callsets'].keys()], metric = ['concordance', 'precision-recall-typable', 'untyped', 'concordance-vs-untyped'], coverage = coverages, regions = ['biallelic', 'multiallelic'])
 
 rule leave_one_out:
 	input:
 		expand("results/leave-one-out/{callset}/plots/resources/resources_{callset}-{coverage}.pdf", callset = [c for c in config['callsets'].keys()], coverage = coverages),
 		expand("results/leave-one-out/{callset}/plots/comparison-versions/{metric}/{metric}_{coverage}_{regions}.pdf", callset = [c for c in config['callsets'].keys()], metric = ['concordance', 'precision-recall-typable', 'untyped', 'concordance-vs-untyped'], coverage = coverages, regions = ['biallelic', 'multiallelic']),
-		#expand("results/leave-one-out/{callset}/plots/comparison-coverages/{metric}/{metric}_{version}_{regions}.pdf", callset = [c for c in config['callsets'].keys()], metric = ['concordance', 'precision-recall-typable', 'untyped'], version = versions_to_run, regions = ['biallelic', 'multiallelic']),
-		#
-		#expand("results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_{representation}_chr{chrom}.vcf", callset = [c for c in config['callsets'].keys()], version=versions_to_run, sample=['NA24385'], representation=["bi", "multi"], chrom=chromosomes),
-		#expand("results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf.gz", callset = [c for c in config['callsets'].keys()], version=versions_to_run, sample=['NA24385'], coverage = coverages),
-		#
-		#expand("results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping-biallelic.vcf.gz", callset = [c for c in config['callsets'].keys()], version=versions_to_run, sample=['NA24385'], coverage = coverages), 
-		#expand("results/leave-one-out/{callset}/graphtyper/{sample}/{coverage}/temp/graphtyper-{sample}_genotyping.vcf", callset = [c for c in config['callsets'].keys()], sample=['NA24385'], coverage = coverages), 
-		#expand("results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf.gz", callset = [c for c in config['callsets'].keys()], sample=['NA24385']), 
-
-
-rule population_typing:
-	input:
-		expand("results/population-typing/{callset}/{version}/{coverage}/merged-vcfs/whole-genome/all-samples_{what}_all.vcf.gz", callset = [c for c in config['callsets'].keys()], what = ['bi'], version = versions_to_run, coverage = coverages),
-		expand("results/population-typing/{callset}/sample-index.tsv", callset = [c for c in config['callsets'].keys()]),
-		expand("results/population-typing/{callset}/{version}/{coverage}/evaluation/statistics/plot_bi_all_filters.tsv", callset = [c for c in config['callsets'].keys()], version = versions_to_run, coverage = ['full'])

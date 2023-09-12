@@ -2,7 +2,7 @@
 
 # Define the folder containing the TSV files
 #folders=("/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/bayestyper/plots/full/" "/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/pangenie.v3/plots/full/" "/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/graphtyper/plots/full/")
-folders=("/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/pangenie.v3/plots/full/")
+folders=("/vol/whopper/genotyping-pipelines/benchmarking-pipeline/results/leave-one-out/HGSVC/graphtyper/plots/full/")
 
 for folder in "${folders[@]}"; do
     # Loop through each TSV file in the folder
@@ -12,12 +12,12 @@ for folder in "${folders[@]}"; do
             # Extract the filename without the path
             filename=$(basename "$file")
             
-            # Get the second line of the TSV file
-            second_line=$(sed -n '2p' "$file")
+            # Skip first line and print the rest of the TSV file
+            metrics=$(tail -n +2 "$file")
             
             # Output the filename and the second line
             echo "$filename"
-            echo "$second_line"
+            echo "$metrics"
             echo
         fi
     done

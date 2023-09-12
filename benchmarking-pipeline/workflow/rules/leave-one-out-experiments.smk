@@ -1,5 +1,3 @@
-#configfile: "config/config.yaml"
-
 kmc=config['programs']['kmc']
 bayestyper=config['programs']['bayestyper']
 bayestyper_tools=config['programs']['bayestyper_tools']
@@ -9,12 +7,11 @@ truvari = config['programs']['truvari']
 
 # parameters
 chromosomes = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "X"]
-bayestyper_reference_canon=config['params']['bayestyper_reference_canon']
-bayestyper_reference_decoy=config['params']['bayestyper_reference_decoy']
+bayestyper_reference_canon=config['utils']['bayestyper_reference_canon']
+bayestyper_reference_decoy=config['utils']['bayestyper_reference_decoy']
 
 # stores paths to reads
 reads_leave_one_out = {}
-unzipped_reads_leave_one_out = {}
 sex_per_sample = {}
 
 for line in open(config['reads'], 'r'):
@@ -26,7 +23,6 @@ for line in open(config['reads'], 'r'):
 	read_path = fields[7]
 	sex_per_sample[sample_name] = 'M' if sample_sex == 1 else 'F'
 	reads_leave_one_out[sample_name] = read_path
-	unzipped_reads_leave_one_out[sample_name] = read_path.replace('.gz', '') 
 
 allowed_variants = ['snp', 'indels', 'large-deletion', 'large-insertion']
 callsets_leave_one_out = [s for s in config['callsets'].keys()]
@@ -107,7 +103,7 @@ rule prepare_truth:
 
 rule compress_vcf:
 	input:
-		"results/leave-one-out/{filename}.vcf"
+		temp("results/leave-one-out/{filename}.vcf")
 	output:
 		vcf = "results/leave-one-out/{filename}.vcf.gz",
 		tbi = "results/leave-one-out/{filename}.vcf.gz.tbi"
@@ -138,7 +134,7 @@ rule pangenie:
 		"results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}.log"
 	threads: 24
 	resources:
-		mem_total_mb=190000,
+		mem_total_mb=80000,
 		runtime_hrs=5,
 		runtime_min=1
 	priority: 1
@@ -160,13 +156,13 @@ rule pangenie_modules:
 		fasta = lambda wildcards: config['callsets'][wildcards.callset]['reference'],
 		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf"
 	output:
-		genotyping = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf"
+		genotyping = temp("results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf")
 	log:
 		index = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_index.log",
 		genotype = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping.log"
 	threads: 24
 	resources:
-		mem_total_mb=190000,
+		mem_total_mb=50000,
 		runtime_hrs=5,
 		runtime_min=1
 	priority: 1
@@ -191,8 +187,8 @@ rule run_kmc:
     input:
         reads = lambda wildcards: reads_leave_one_out[wildcards.sample] if wildcards.coverage == 'full' else "results/downsampling/{callset}/{coverage}/{sample}_{coverage}.fa"
     output:
-        suf="results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.kmc_suf",
-        pre="results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.kmc_pre"
+        suf=temp("results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.kmc_suf"),
+        pre=temp("results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.kmc_pre")
     log:
         "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}_kmc.log"
     params:
@@ -219,8 +215,8 @@ rule create_bloomfilter:
         suf = "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.kmc_suf",
         pre = "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.kmc_pre"
     output:
-        "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.bloomData",
-        "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.bloomMeta"
+        temp("results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.bloomData"),
+        temp("results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.bloomMeta")
     log:
         "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}_bloom.log"
     params:
@@ -236,7 +232,7 @@ rule create_bloomfilter:
 # create samples file
 rule bayestyper_make_samples_file:
 	output:
-		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.tsv"
+		temp("results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.tsv")
 	params:
 		prefix="results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}",
 		sex=lambda wildcards: sex_per_sample[wildcards.sample]
@@ -247,6 +243,7 @@ rule bayestyper_make_samples_file:
 # bayestyper cluster
 checkpoint bayestyper_cluster:
 	input:
+		"data/downloaded/bayestyper_utils/bayestyper_GRCh38_bundle.tar.gz",
 		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.bloomData",
 		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.bloomMeta",
 		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf",
@@ -277,8 +274,7 @@ rule run_bayestyper_genotype:
 		samples = "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/temp/kmers/{sample}.tsv",
 		unit = "results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/clusters/bayestyper_unit_{unit_id}/variant_clusters.bin"
 	output:
-		genotypes="results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/genotype/bayestyper_unit_{unit_id}/bayestyper.vcf",
-		#kmer_coverage_file="results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/genotype/bayestyper_unit_{unit_id}/bayestyper_genomic_parameters.txt"
+		genotypes=temp("results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/genotype/bayestyper_unit_{unit_id}/bayestyper.vcf"),
 	log:
 		"results/leave-one-out/{callset}/bayestyper/{sample}/{coverage}/genotype/bayestyper_unit_{unit_id}/bayestyper.log"
 	params:
@@ -336,7 +332,7 @@ rule split_vcf_by_chromosome:
         vcf=lambda wildcards: "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_{representation}.vcf.gz",
         tbi=lambda wildcards: "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_{representation}.vcf.gz.tbi"
     output:
-        "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_{representation}_chr{chrom}.vcf"
+        temp("results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_{representation}_chr{chrom}.vcf")
     wildcard_constraints:
         chrom="X|Y|[0-9]+",
         representation="multi|bi"
@@ -353,7 +349,7 @@ rule graphtyper_preprocess:
 		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_bi_chr{chrom}.vcf.gz",
 		tbi="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_bi_chr{chrom}.vcf.gz.tbi"
 	output:
-		vcf="results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_bi_chr{chrom}_{variant}.vcf"
+		vcf=temp("results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_bi_chr{chrom}_{variant}.vcf")
 	wildcard_constraints:
 		chrom="X|Y|[0-9]+",
 		variant="indel|sv"
@@ -373,7 +369,7 @@ rule graphtyper_genotype:
         bai = "results/downsampling/{callset}/{coverage}/aligned/{sample}_full.chr{chrom}.bam.bai",
         fasta= lambda wildcards: config['callsets'][wildcards.callset]['reference']
     output:
-        vcf="results/leave-one-out/{callset}/graphtyper/{sample}/{coverage}/temp/{variant}/graphtyper-{sample}_genotyping.chr{chrom}.vcf"
+        vcf=temp("results/leave-one-out/{callset}/graphtyper/{sample}/{coverage}/temp/{variant}/graphtyper-{sample}_genotyping.chr{chrom}.vcf")
     params:
         dir="results/leave-one-out/{callset}/graphtyper/{sample}/{coverage}/temp/{variant}"
     wildcard_constraints:
@@ -394,11 +390,11 @@ rule graphtyper_genotype:
         """
         ulimit -n 5000
 		if [ "{wildcards.variant}" == "sv" ]; then 
-            (/usr/bin/time -v {graphtyper} genotype_sv {input.fasta} {input.vcf} --sam={input.bam} --region=chr{wildcards.chrom}  --output={params.dir} --threads={threads}) &> {log}
+            (/usr/bin/time -v {graphtyper} genotype_sv {input.fasta} {input.vcf} --sam={input.bam} --region=chr{wildcards.chrom}  --output={params.dir} --threads={threads} --force_no_filter_zero_qual) &> {log}
             bcftools concat -a {params.dir}/chr{wildcards.chrom}/*.vcf.gz | python3 workflow/scripts/graphtyper-postprocess.py {input.vcf} > {output.vcf}
         else
             if [ "{wildcards.variant}" == "indel" ]; then
-                (/usr/bin/time -v {graphtyper} genotype {input.fasta} --vcf={input.vcf} --sam={input.bam} --region=chr{wildcards.chrom} --no_decompose --verbose --output={params.dir} --threads={threads}) &> {log}
+                (/usr/bin/time -v {graphtyper} genotype {input.fasta} --vcf={input.vcf} --sam={input.bam} --region=chr{wildcards.chrom} --no_decompose --verbose --output={params.dir} --threads={threads} --force_no_filter_zero_qual) &> {log}
                 bcftools concat -a {params.dir}/chr{wildcards.chrom}/*.vcf.gz > {output.vcf}
             fi
         fi
@@ -460,14 +456,13 @@ def get_panel_vcf(wildcards):
 		return "results/leave-one-out/{callset}/input-panel/panel-{sample}-{callset}_multi_norm.vcf"
 
 # convert genotyped VCF to biallelic representation
-## Probably include here the other algorithms (Bayestyper, GraphTyper)
 rule convert_genotypes_to_biallelic:
 	input:
 		genotyped_vcf = "results/leave-one-out/{callset}/{version}/{sample}/{coverage}/temp/{version}-{sample}_genotyping.vcf.gz",
         panel_vcf = get_panel_vcf,
 		biallelic = lambda wildcards: config['callsets'][wildcards.callset]['bi']
 	output:
-		"results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping-biallelic.vcf"
+		temp("results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping-biallelic.vcf")
 	log:
 		"results/leave-one-out/{callset}/{version}/{sample}/{coverage}/{version}-{sample}_genotyping-biallelic.log"
 	conda:
@@ -676,8 +671,6 @@ rule collect_results_vcfeval:
 		lambda wildcards: expand("results/leave-one-out/{{callset}}/{{version}}/{sample}/{{coverage}}/{{metric}}/{{regions}}_{{vartype}}/summary.txt", sample = config['callsets'][wildcards.callset]['leave_one_out_samples'])
 	output:
 		"results/leave-one-out/{callset}/{version}/plots/{coverage}/{metric}-{callset}-{version}-{coverage}_{regions}_{vartype}.tsv"
-	#wildcard_constraints:
-	#	vartype = 'snp|indels'
 	params:
 		samples = lambda wildcards: ','.join([c for c in config['callsets'][wildcards.callset]['leave_one_out_samples']]),
 		outfile = "results/leave-one-out/{callset}/{version}/plots/{coverage}/{metric}-{callset}-{version}-{coverage}_{regions}_{vartype}",
@@ -703,7 +696,7 @@ rule plotting_versions:
 	params:
 		sources = lambda wildcards: ' '.join([wildcards.callset + '-' + v + '-' + wildcards.coverage + '_' + wildcards.regions for v in versions_leave_one_out])
 	shell:
-		"python3 workflow/scripts/plot-results_for_slides.py -files {input} -outname {output} -sources {params.sources} -metric {wildcards.metric}"
+		"python3 workflow/scripts/plot-results.py -files {input} -outname {output} -sources {params.sources} -metric {wildcards.metric}"
 
 
 
@@ -721,8 +714,8 @@ rule plotting_versions_conc_vs_untyped:
 	params:
 		sources = lambda wildcards: ' '.join([wildcards.callset + '-' + v + '-' + wildcards.coverage + '_' + wildcards.regions for v in versions_leave_one_out])
 	shell:
-		"python3 workflow/scripts/plot-results_for_slides.py -files {input} -outname {output} -sources {params.sources} -metric concordance-vs-untyped"
-
+		"python3 workflow/scripts/plot-results.py -files {input} -outname {output} -sources {params.sources} -metric concordance-vs-untyped"
+		
 
 
 # plot results of different coverages
